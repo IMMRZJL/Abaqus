@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Abaqus Job Pulse</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-soft: #f1f4f8;
+      --text: #18202a;
+      --muted: #667384;
+      --line: #dce3ec;
+      --blue: #2266d8;
+      --green: #168a5b;
+      --amber: #b66b00;
+      --red: #c93535;
+      --teal: #0c7d8a;
+      --ink: #243447;
+      --shadow: 0 14px 32px rgba(21, 33, 48, 0.10);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 14px 22px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 720;
+      letter-spacing: 0;
+      color: var(--ink);
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 7px;
+      height: 36px;
+      padding: 0 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      border-color: #b7c5d8;
+      background: #f8fafc;
+    }
+
+    .btn.primary {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: #1f5ec6;
+    }
+
+    main {
+      max-width: 1380px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) 170px 150px 150px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 640;
+    }
+
+    select, input {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--text);
+      padding: 0 10px;
+      min-width: 0;
+    }
+
+    input[type="number"] {
+      appearance: textfield;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 720;
+      color: var(--ink);
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .status-pill {
+      min-width: 110px;
+      height: 30px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 760;
+      border: 1px solid transparent;
+    }
+
+    .status-running {
+      color: #075b3c;
+      background: #e8f7ef;
+      border-color: #b7e6ca;
+    }
+
+    .status-complete {
+      color: #0b5b79;
+      background: #e7f5fa;
+      border-color: #acdcea;
+    }
+
+    .status-failed {
+      color: #842323;
+      background: #fdeaea;
+      border-color: #f3b9b9;
+    }
+
+    .status-idle {
+      color: #5a6472;
+      background: #eef2f6;
+      border-color: #d8e0eb;
+    }
+
+    .progress-wrap {
+      display: grid;
+      gap: 10px;
+    }
+
+    .progress-track {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      height: 22px;
+      border-radius: 7px;
+      background: #e6ebf2;
+      border: 1px solid #d6deea;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      min-width: 0;
+      background: linear-gradient(90deg, var(--blue), var(--teal));
+      transition: width 420ms ease;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      background: var(--panel-soft);
+      border: 1px solid #e0e7f0;
+      border-radius: 7px;
+      padding: 11px 12px;
+      min-height: 74px;
+      display: grid;
+      align-content: space-between;
+      gap: 8px;
+    }
+
+    .metric .name {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .metric .value {
+      font-size: 19px;
+      font-weight: 740;
+      color: var(--ink);
+      overflow-wrap: anywhere;
+    }
+
+    .metric .hint {
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .alert-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .alert {
+      border: 1px solid var(--line);
+      border-left-width: 4px;
+      border-radius: 7px;
+      padding: 10px 11px;
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .alert.warning {
+      border-left-color: var(--amber);
+    }
+
+    .alert.error {
+      border-left-color: var(--red);
+    }
+
+    .alert.info {
+      border-left-color: var(--blue);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .mono {
+      font-family: "Cascadia Mono", Consolas, "SFMono-Regular", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: #26384d;
+      background: #f5f7fa;
+      border: 1px solid #e0e6ef;
+      border-radius: 7px;
+      padding: 12px;
+      max-height: 320px;
+      overflow: auto;
+    }
+
+    .empty {
+      padding: 42px 20px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed #cdd7e4;
+      border-radius: var(--radius);
+      background: #fafbfd;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    @media (max-width: 980px) {
+      .topbar, .controls, .grid, .split {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        padding: 14px;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="topbar">
+        <div class="brand">
+          <h1>Abaqus Job Pulse</h1>
+          <div id="folderLine" class="subtitle">Select an Abaqus job folder to start monitoring `.sta`, `.log`, `.dat`, and `.lck` files.</div>
+        </div>
+        <div class="toolbar">
+          <button id="selectFolderBtn" class="btn primary" type="button">Select Job Folder</button>
+          <button id="refreshBtn" class="btn" type="button">Refresh</button>
+          <button id="pauseBtn" class="btn" type="button">Pause</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="panel-body controls">
+          <label>
+            Job
+            <select id="jobSelect">
+              <option value="">No folder selected</option>
+            </select>
+          </label>
+          <label>
+            Step Target Time
+            <input id="targetTimeInput" type="number" min="0.000001" step="0.1" value="1">
+          </label>
+          <label>
+            Poll Seconds
+            <input id="pollSecondsInput" type="number" min="2" step="1" value="10">
+          </label>
+          <label>
+            ETA Window
+            <input id="windowInput" type="number" min="3" step="1" value="20">
+          </label>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Live Status</h2>
+            <span id="statusPill" class="status-pill status-idle">No Job</span>
+          </div>
+          <div class="panel-body">
+            <div id="emptyState" class="empty">Choose the folder that contains your Abaqus `.sta` file.</div>
+            <div id="dashboard" style="display:none">
+              <div class="progress-wrap">
+                <div class="progress-track" aria-label="Step progress">
+                  <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div class="progress-meta">
+                  <span id="progressText">0.0%</span>
+                  <span id="lastRefreshText">Not refreshed yet</span>
+                </div>
+              </div>
+
+              <div class="metric-grid">
+                <div class="metric">
+                  <div class="name">Step Time</div>
+                  <div id="stepTimeValue" class="value">-</div>
+                  <div id="stepTimeHint" class="hint">Target 1.0</div>
+                </div>
+                <div class="metric">
+                  <div class="name">ETA</div>
+                  <div id="etaValue" class="value">-</div>
+                  <div id="etaHint" class="hint">Based on recent `.sta` rows</div>
+                </div>
+                <div class="metric">
+                  <div class="name">Wall Time</div>
+                  <div id="wallValue" class="value">-</div>
+                  <div id="incrementHint" class="hint">Increment -</div>
+                </div>
+                <div class="metric">
+                  <div class="name">Critical Element</div>
+                  <div id="criticalValue" class="value">-</div>
+                  <div id="stableHint" class="hint">Stable increment -</div>
+                </div>
+                <div class="metric">
+                  <div class="name">Kinetic Energy</div>
+                  <div id="keValue" class="value">-</div>
+                  <div id="energyHint" class="hint">Total energy -</div>
+                </div>
+                <div class="metric">
+                  <div class="name">Output Frames</div>
+                  <div id="frameValue" class="value">-</div>
+                  <div class="hint">From status file</div>
+                </div>
+                <div class="metric">
+                  <div class="name">Job Lock</div>
+                  <div id="lockValue" class="value">-</div>
+                  <div class="hint">`.lck` presence</div>
+                </div>
+                <div class="metric">
+                  <div class="name">Files</div>
+                  <div id="filesValue" class="value">-</div>
+                  <div class="hint">STA / LOG / DAT</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Warnings</h2>
+          </div>
+          <div class="panel-body">
+            <div id="alerts" class="alert-list">
+              <div class="alert info">No job loaded yet.</div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="split">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Latest `.sta` Lines</h2>
+          </div>
+          <div class="panel-body">
+            <pre id="staTail" class="mono">No data.</pre>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Manual Commands</h2>
+          </div>
+          <div class="panel-body">
+            <pre id="commands" class="mono">Select a job to show commands.</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const state = {
+      dirHandle: null,
+      files: new Map(),
+      jobs: [],
+      selectedJob: "",
+      timer: null,
+      paused: false,
+      lastSnapshot: null
+    };
+
+    const el = {
+      selectFolderBtn: document.getElementById("selectFolderBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      pauseBtn: document.getElementById("pauseBtn"),
+      folderLine: document.getElementById("folderLine"),
+      jobSelect: document.getElementById("jobSelect"),
+      targetTimeInput: document.getElementById("targetTimeInput"),
+      pollSecondsInput: document.getElementById("pollSecondsInput"),
+      windowInput: document.getElementById("windowInput"),
+      statusPill: document.getElementById("statusPill"),
+      emptyState: document.getElementById("emptyState"),
+      dashboard: document.getElementById("dashboard"),
+      progressFill: document.getElementById("progressFill"),
+      progressText: document.getElementById("progressText"),
+      lastRefreshText: document.getElementById("lastRefreshText"),
+      stepTimeValue: document.getElementById("stepTimeValue"),
+      stepTimeHint: document.getElementById("stepTimeHint"),
+      etaValue: document.getElementById("etaValue"),
+      etaHint: document.getElementById("etaHint"),
+      wallValue: document.getElementById("wallValue"),
+      incrementHint: document.getElementById("incrementHint"),
+      criticalValue: document.getElementById("criticalValue"),
+      stableHint: document.getElementById("stableHint"),
+      keValue: document.getElementById("keValue"),
+      energyHint: document.getElementById("energyHint"),
+      frameValue: document.getElementById("frameValue"),
+      lockValue: document.getElementById("lockValue"),
+      filesValue: document.getElementById("filesValue"),
+      alerts: document.getElementById("alerts"),
+      staTail: document.getElementById("staTail"),
+      commands: document.getElementById("commands")
+    };
+
+    function fmtNumber(value, digits = 4) {
+      if (value === null || value === undefined || Number.isNaN(value)) return "-";
+      const abs = Math.abs(value);
+      if (abs !== 0 && (abs < 0.001 || abs >= 100000)) return value.toExponential(3);
+      return value.toLocaleString(undefined, { maximumFractionDigits: digits });
+    }
+
+    function parseNum(text) {
+      if (!text) return NaN;
+      return Number(String(text).replace(/D/i, "E"));
+    }
+
+    function parseWallTime(text) {
+      const m = String(text || "").match(/^(\d+):(\d{2}):(\d{2})$/);
+      if (!m) return NaN;
+      return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+    }
+
+    function fmtDuration(seconds) {
+      if (!Number.isFinite(seconds) || seconds < 0) return "-";
+      seconds = Math.round(seconds);
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+      if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
+      return `${s}s`;
+    }
+
+    function setStatus(kind, text) {
+      el.statusPill.className = `status-pill status-${kind}`;
+      el.statusPill.textContent = text;
+    }
+
+    async function readTextFile(name) {
+      const handle = state.files.get(name.toLowerCase());
+      if (!handle) return null;
+      const file = await handle.getFile();
+      return {
+        text: await file.text(),
+        size: file.size,
+        modified: file.lastModified
+      };
+    }
+
+    async function fileExists(name) {
+      return state.files.has(name.toLowerCase());
+    }
+
+    async function scanDirectory() {
+      state.files.clear();
+      for await (const [name, handle] of state.dirHandle.entries()) {
+        if (handle.kind === "file") state.files.set(name.toLowerCase(), handle);
+      }
+
+      const staJobs = [];
+      for (const name of state.files.keys()) {
+        if (name.endsWith(".sta")) staJobs.push(name.slice(0, -4));
+      }
+
+      const enriched = [];
+      for (const job of staJobs) {
+        const handle = state.files.get(`${job}.sta`);
+        let modified = 0;
+        try {
+          modified = (await handle.getFile()).lastModified;
+        } catch (_) {}
+        enriched.push({ job, modified });
+      }
+      enriched.sort((a, b) => b.modified - a.modified);
+      state.jobs = enriched.map(item => item.job);
+
+      const previous = state.selectedJob;
+      el.jobSelect.innerHTML = "";
+      if (!state.jobs.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No .sta files found";
+        el.jobSelect.appendChild(opt);
+        state.selectedJob = "";
+        return;
+      }
+
+      for (const job of state.jobs) {
+        const opt = document.createElement("option");
+        opt.value = job;
+        opt.textContent = job;
+        el.jobSelect.appendChild(opt);
+      }
+
+      state.selectedJob = state.jobs.includes(previous) ? previous : state.jobs[0];
+      el.jobSelect.value = state.selectedJob;
+    }
+
+    function parseExplicitRows(staText) {
+      const rows = [];
+      const rowRe = /^\s*(\d+)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)\s+(\d+:\d{2}:\d{2})\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)\s+(\d+)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)/i;
+      for (const line of staText.split(/\r?\n/)) {
+        const m = line.match(rowRe);
+        if (!m) continue;
+        rows.push({
+          increment: Number(m[1]),
+          stepTime: parseNum(m[2]),
+          totalTime: parseNum(m[3]),
+          wall: m[4],
+          wallSeconds: parseWallTime(m[4]),
+          stableIncrement: parseNum(m[5]),
+          criticalElement: m[6],
+          kineticEnergy: parseNum(m[7]),
+          totalEnergy: parseNum(m[8]),
+          raw: line
+        });
+      }
+      return rows;
+    }
+
+    function parseStandardRows(staText) {
+      const rows = [];
+      const rowRe = /^\s*(\d+)\s+(\d+)\s+(\d+U?)\s+\d+\s+\d+\s+\d+\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[ED][+-]?\d+)?)/i;
+      for (const line of staText.split(/\r?\n/)) {
+        const m = line.match(rowRe);
+        if (!m) continue;
+        rows.push({
+          step: Number(m[1]),
+          increment: Number(m[2]),
+          attempt: m[3],
+          totalTime: parseNum(m[4]),
+          stepTime: parseNum(m[5]),
+          incTime: parseNum(m[6]),
+          raw: line
+        });
+      }
+      return rows;
+    }
+
+    function estimateEta(rows, targetTime, windowSize) {
+      const usable = rows.filter(row => Number.isFinite(row.stepTime));
+      if (usable.length < 2) return { seconds: NaN, method: "Need more rows" };
+      const latest = usable[usable.length - 1];
+      const recent = usable.slice(Math.max(0, usable.length - windowSize));
+      const first = recent[0];
+
+      if (Number.isFinite(latest.wallSeconds) && Number.isFinite(first.wallSeconds)) {
+        const dStep = latest.stepTime - first.stepTime;
+        const dWall = latest.wallSeconds - first.wallSeconds;
+        if (dStep > 0 && dWall > 0) {
+          const rate = dStep / dWall;
+          return {
+            seconds: Math.max(0, (targetTime - latest.stepTime) / rate),
+            method: `Recent ${recent.length} rows`
+          };
+        }
+      }
+
+      if (Number.isFinite(latest.wallSeconds) && latest.stepTime > 0) {
+        const rate = latest.stepTime / latest.wallSeconds;
+        return {
+          seconds: Math.max(0, (targetTime - latest.stepTime) / rate),
+          method: "Whole-file average"
+        };
+      }
+
+      return { seconds: NaN, method: "ETA unavailable" };
+    }
+
+    function extractFrames(staText) {
+      const matches = [...staText.matchAll(/Output Field Frame Number\s+(\d+),\s+of\s+(\d+)/g)];
+      if (!matches.length) return null;
+      const last = matches[matches.length - 1];
+      return `${last[1]} / ${last[2]}`;
+    }
+
+    function tailLines(text, count) {
+      return text.split(/\r?\n/).slice(-count).join("\n");
+    }
+
+    function hasAny(text, patterns) {
+      return patterns.some(p => p.test(text || ""));
+    }
+
+    function makeAlerts(snapshot) {
+      const alerts = [];
+      if (!snapshot.hasSta) alerts.push({ kind: "error", text: "No `.sta` file found for this job." });
+      if (snapshot.hasLock) alerts.push({ kind: "info", text: "Job lock exists. Abaqus is probably still running this job." });
+      if (snapshot.complete) alerts.push({ kind: "info", text: "Completion marker found in the status/log files." });
+      if (snapshot.failed) alerts.push({ kind: "error", text: "Failure/error marker found. Inspect `.log`, `.msg`, and `.dat`." });
+
+      if (snapshot.lastRow?.stableIncrement && snapshot.lastRow.stableIncrement < 1e-7) {
+        alerts.push({
+          kind: "warning",
+          text: `Very small stable increment (${snapshot.lastRow.stableIncrement.toExponential(3)}). Critical element ${snapshot.lastRow.criticalElement || "unknown"} is controlling runtime.`
+        });
+      }
+
+      const total = Math.abs(snapshot.lastRow?.totalEnergy || NaN);
+      const ke = Math.abs(snapshot.lastRow?.kineticEnergy || NaN);
+      if (Number.isFinite(total) && total > 0 && Number.isFinite(ke)) {
+        const ratio = ke / total;
+        if (ratio > 0.1) {
+          alerts.push({
+            kind: "warning",
+            text: `Kinetic energy is about ${(ratio * 100).toFixed(1)}% of |total energy|. Check quasi-static interpretation after completion.`
+          });
+        }
+      }
+
+      if (!alerts.length) alerts.push({ kind: "info", text: "No obvious status warnings from the parsed files." });
+      return alerts;
+    }
+
+    async function refresh() {
+      if (!state.dirHandle || state.paused) return;
+      await scanDirectory();
+      const job = state.selectedJob;
+      if (!job) {
+        showEmpty("No `.sta` files found in the selected folder.");
+        return;
+      }
+
+      const staName = `${job}.sta`;
+      const logName = `${job}.log`;
+      const datName = `${job}.dat`;
+      const lckName = `${job}.lck`;
+
+      const [sta, log, dat] = await Promise.all([
+        readTextFile(staName),
+        readTextFile(logName),
+        readTextFile(datName)
+      ]);
+
+      const staText = sta?.text || "";
+      const logText = log?.text || "";
+      const datText = dat?.text || "";
+      const hasLock = await fileExists(lckName);
+      const explicitRows = parseExplicitRows(staText);
+      const standardRows = parseStandardRows(staText);
+      const rows = explicitRows.length ? explicitRows : standardRows;
+      const lastRow = rows.length ? rows[rows.length - 1] : null;
+      const targetTime = Math.max(0.000001, Number(el.targetTimeInput.value) || 1);
+      const windowSize = Math.max(3, Number(el.windowInput.value) || 20);
+      const progress = lastRow ? Math.max(0, Math.min(1, lastRow.stepTime / targetTime)) : 0;
+      const eta = estimateEta(rows, targetTime, windowSize);
+      const complete = hasAny(staText + "\n" + logText + "\n" + datText, [
+        /THE ANALYSIS HAS COMPLETED SUCCESSFULLY/i,
+        /THE ANALYSIS HAS BEEN COMPLETED/i,
+        /Abaqus JOB .* COMPLETED/i
+      ]) && !hasLock;
+      const failed = hasAny(logText + "\n" + datText, [
+        /Abaqus Error/i,
+        /exited with errors/i,
+        /TERMINATED/i,
+        /\*\*\*ERROR/i
+      ]);
+
+      const snapshot = {
+        job,
+        hasSta: Boolean(sta),
+        hasLog: Boolean(log),
+        hasDat: Boolean(dat),
+        hasLock,
+        explicit: Boolean(explicitRows.length),
+        complete,
+        failed,
+        rows,
+        lastRow,
+        progress,
+        eta,
+        staText,
+        logText,
+        datText
+      };
+      state.lastSnapshot = snapshot;
+      render(snapshot);
+    }
+
+    function showEmpty(message) {
+      el.emptyState.style.display = "block";
+      el.dashboard.style.display = "none";
+      el.emptyState.textContent = message;
+      setStatus("idle", "No Job");
+    }
+
+    function render(snapshot) {
+      el.emptyState.style.display = "none";
+      el.dashboard.style.display = "block";
+
+      if (snapshot.failed) setStatus("failed", "Check Files");
+      else if (snapshot.complete) setStatus("complete", "Complete");
+      else if (snapshot.hasLock) setStatus("running", "Running");
+      else setStatus("idle", "No Lock");
+
+      const progressPercent = snapshot.progress * 100;
+      el.progressFill.style.width = `${progressPercent.toFixed(2)}%`;
+      el.progressText.textContent = `${progressPercent.toFixed(2)}% of target step time`;
+      el.lastRefreshText.textContent = `Refreshed ${new Date().toLocaleTimeString()}`;
+
+      const row = snapshot.lastRow;
+      el.stepTimeValue.textContent = row ? fmtNumber(row.stepTime, 6) : "-";
+      el.stepTimeHint.textContent = `Target ${fmtNumber(Number(el.targetTimeInput.value) || 1, 4)}`;
+      el.etaValue.textContent = snapshot.complete ? "0s" : fmtDuration(snapshot.eta.seconds);
+      el.etaHint.textContent = snapshot.eta.method;
+      el.wallValue.textContent = row?.wall || (row?.totalTime ? fmtNumber(row.totalTime, 4) : "-");
+      el.incrementHint.textContent = row?.increment ? `Increment ${row.increment.toLocaleString()}` : "Increment -";
+      el.criticalValue.textContent = row?.criticalElement || "-";
+      el.stableHint.textContent = row?.stableIncrement ? `Stable ${row.stableIncrement.toExponential(3)}` : "Stable increment -";
+      el.keValue.textContent = row?.kineticEnergy !== undefined ? fmtNumber(row.kineticEnergy, 4) : "-";
+      el.energyHint.textContent = row?.totalEnergy !== undefined ? `Total ${fmtNumber(row.totalEnergy, 4)}` : "Total energy -";
+      el.frameValue.textContent = extractFrames(snapshot.staText) || "-";
+      el.lockValue.textContent = snapshot.hasLock ? "Present" : "Absent";
+      el.filesValue.textContent = `${snapshot.hasSta ? "STA" : "-"} / ${snapshot.hasLog ? "LOG" : "-"} / ${snapshot.hasDat ? "DAT" : "-"}`;
+
+      el.alerts.innerHTML = "";
+      for (const alert of makeAlerts(snapshot)) {
+        const div = document.createElement("div");
+        div.className = `alert ${alert.kind}`;
+        div.textContent = alert.text;
+        el.alerts.appendChild(div);
+      }
+
+      el.staTail.textContent = snapshot.staText ? tailLines(snapshot.staText, 90) : "No status file data.";
+      renderCommands(snapshot.job);
+    }
+
+    function renderCommands(job) {
+      const folder = state.dirHandle?.name || "<selected folder>";
+      el.commands.textContent = [
+        `Job: ${job}`,
+        `Folder: ${folder}`,
+        "",
+        "PowerShell checks:",
+        `Get-Process explicit_dp`,
+        `Test-Path ".\\${job}.lck"`,
+        `Get-Content ".\\${job}.sta" -Tail 40`,
+        "",
+        "Terminate this job:",
+        `abaqus terminate job=${job}`,
+        "",
+        "Open result manually in Abaqus/CAE:",
+        `File > Open Database... > ${job}.odb`
+      ].join("\n");
+    }
+
+    function restartTimer() {
+      if (state.timer) clearInterval(state.timer);
+      const seconds = Math.max(2, Number(el.pollSecondsInput.value) || 10);
+      state.timer = setInterval(() => {
+        refresh().catch(showError);
+      }, seconds * 1000);
+    }
+
+    function showError(error) {
+      console.error(error);
+      el.alerts.innerHTML = "";
+      const div = document.createElement("div");
+      div.className = "alert error";
+      div.textContent = error?.message || String(error);
+      el.alerts.appendChild(div);
+      setStatus("failed", "Tool Error");
+    }
+
+    async function selectFolder() {
+      if (!("showDirectoryPicker" in window)) {
+        showError(new Error("This browser does not support folder polling. Use current Chrome or Edge and open this HTML directly."));
+        return;
+      }
+      state.dirHandle = await window.showDirectoryPicker({ mode: "read" });
+      el.folderLine.textContent = `Monitoring folder: ${state.dirHandle.name}`;
+      state.paused = false;
+      el.pauseBtn.textContent = "Pause";
+      await refresh();
+      restartTimer();
+    }
+
+    el.selectFolderBtn.addEventListener("click", () => selectFolder().catch(showError));
+    el.refreshBtn.addEventListener("click", () => refresh().catch(showError));
+    el.pauseBtn.addEventListener("click", () => {
+      state.paused = !state.paused;
+      el.pauseBtn.textContent = state.paused ? "Resume" : "Pause";
+      if (!state.paused) refresh().catch(showError);
+    });
+    el.jobSelect.addEventListener("change", () => {
+      state.selectedJob = el.jobSelect.value;
+      refresh().catch(showError);
+    });
+    el.pollSecondsInput.addEventListener("change", restartTimer);
+    el.targetTimeInput.addEventListener("change", () => refresh().catch(showError));
+    el.windowInput.addEventListener("change", () => refresh().catch(showError));
+  </script>
+</body>
+</html>
