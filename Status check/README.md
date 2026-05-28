@@ -1,10 +1,11 @@
 # Abaqus Job Pulse
-
+# CLI working (or MCP controlled) in the background and can't be checked with the GUI. This tool gives a interface to check the progress. 
+# My CodeX submitted a work request and I can't see. This is my version of qstat -u $USER
 Open `index.html` in Chrome or Edge.
 
 Use **Select Job Folder** and choose:
 
-`D:\Abaqus work directory\screw_pile_v2_2_z_vertical_geostatic_import`
+`X:\Abaqus work directory\`
 
 The tool reads local Abaqus job files:
 
